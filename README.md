@@ -27,11 +27,14 @@ repositories {
 and then include Papyrus JIJ with the standard loom "include" gradle configuration:
 ``` kotlin
 # Kotlin DSL
-include("dk.nelind:papyrus:(version)")
+modRuntimeOnly(include("dk.nelind:papyrus:(version)")!!)
 
 # Groovy DSL
-include "dk.nelind:papyrus:(version)"
+modRuntimeOnly include("dk.nelind:papyrus:(version)")
 ```
+You can also choose to not include Papyrus JIJ in that case make sure to manually add Papyrus as a dependency in your
+`fabric.mod.json`. If you need to access Papyrus internals you can also add Papyrus with the `modApi` configuration instead of the
+`modRuntimeOnly` configuration.
 
 Then get and use the `MappingResolver` with any of the added mapping namespaces:
 ```java
@@ -39,13 +42,20 @@ MappingResolver mappingResolver = FabricLoader.getInstance().getMappingResolver(
 String runtimeClassNameFromYarnName = mappingResolver.mapClassName("yarn", yarnClassName);
 String runtimeClassNameFromMojmapName = mappingResolver.mapClassname("mojmap", mojmapClassName);
 ```
-Papyrus injects the added mappings at `preLaunch` so you should only use Papyrus at some point after that.
-If the here and there talks about possible future fabric loader plugins go somewhere where it makes sense for
-Papyrus to become a loader plugin it will. Hopefully making extra mappings available at `preLaunch`
+### Usage notes:
+- Papyrus injects the added mappings at `preLaunch` so you should only use Papyrus at some point after that.
+  If the here and there talks about possible future fabric loader plugins go somewhere where it makes sense for
+  Papyrus to become a loader plugin it will. Hopefully making extra mappings available at `preLaunch`
 
-You can also add Papyrus with the `modApi` configuration and then add Papyrus as a dependency in your `fabric.mod.json`.
-However, this is highly discouraged as it pollutes your classpath with Papyrus classes and makes what should be
-considered a technical detail more cumbersome for the end user than it needs to be.
+- Mojmap handles inherited class members differently from Intermediary and Yarn!
+Intermediary and Yarn only give mappings for members defined directly in a class in said classes mapping
+definition whereas Mojmap gives names for all members a class has, inherited or not. In practice this means that if you
+ask the mapping resolver for a Mojmap method name in a class where the class has inherited the method while the runtime
+mappings are either Intermediary or Yarn you'll get `null` because the resolver *can* find that name (in Mojmap) but
+there is no defined name for that method in the runtime mapping. ***What does this mean for you?*** If you're using
+Mojmap names as the input to the mapping resolver *you should use the class name of the class a method or field is
+declared on not the class you want to modify*. Alternatively you can have a null check and programmatically find the
+class's super class and ask the mapping resolver for the member name with that class as the owning class.
 
 ## Provided mappings
 
